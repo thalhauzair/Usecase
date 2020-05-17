@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:scripting="http://www.mulesoft.org/schema/mule/scripting"
+	xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
+http://www.mulesoft.org/schema/mule/scripting http://www.mulesoft.org/schema/mule/scripting/current/mule-scripting.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<flow name="Contact" doc:id="2fd220a9-d7ed-47f7-85c3-89b2c9d81dc0" >
+		<set-variable value="#[attributes.queryParams.source]" doc:name="Set Variable" doc:id="0a9ab37c-1d35-4d9f-b0f7-3140b8ab3f51" variableName="database" />
+		<choice doc:name="Choice to select db or sf" doc:id="d7b6a212-5bd4-4cb3-a092-39b02c787cd3" >
+			<when expression="#[vars.database =='sfdc']" >
+				<salesforce:create type="Contact" doc:name="SftoDb Create" doc:id="34316f37-51f2-4ea3-a9fc-fc6679ef0b5f" config-ref="Salesforce_Config" />
+				<scripting:execute engine="groovy" doc:name="sf flow to start and db flow to stop" doc:id="7bd27121-e54d-4750-bf92-f629ec768f41" >
+					<scripting:code >flow2 = registry.lookupByName(&quot;querySalesforceContacts&quot;).get();
+flow3 = registry.lookupByName(&quot;queryDatabaseContacts&quot;).get();
+if (flow3.isStarted())
+flow3.stop()
+if (flow2.isStopped())
+flow2.start()</scripting:code>
+				</scripting:execute>
+				<logger level="INFO" doc:name="Copy_of_Logger" doc:id="29137289-6b9b-41bb-9286-602b2e87bdc4" message="added" />
+			</when>
+			<when expression="#[vars.database=='db']" >
+				<db:bulk-insert doc:name="db to sf Insert" doc:id="9d92fdad-686c-4031-bd12-128e840c8912" config-ref="Database_Config" >
+					<db:sql >INSERT INTO Contact (
+	FirstName,
+	Description,
+        LastName,
+        Email,
+	Type,
+        Phone,
+	LastModifiedDate
+	
+) VALUES (
+	:FirstName,
+	:Description,
+	:LastName,
+	:Email,
+        :Type,
+        :Phone,
+	CURRENT_TIMESTAMP()
+	)</db:sql>
+				</db:bulk-insert>
+				<scripting:execute engine="groovy" doc:name="db flow to start and sf flow to stop" doc:id="93c50c39-4e01-40d9-93ce-f53a858a3df7" >
+					<scripting:code >flow2 = registry.lookupByName(&quot;querySalesforceContacts&quot;).get();
+      flow3 = registry.lookupByName(&quot;queryDatabaseContacts&quot;).get();
+      if (flow2.isStarted())
+        flow2.stop()
+     if (flow3.isStopped())
+        flow3.start()</scripting:code>
+				</scripting:execute>
+				<logger level="INFO" doc:name="checking execute" doc:id="26091959-a389-46b5-9ba5-360b9bc31b4e" message="execute started" />
+			</when>
+			<otherwise >
+				<logger level="INFO" doc:name="Default Logger" doc:id="9cd27fa9-327b-4246-823d-a74c73e175c7" message="default" />
+			</otherwise>
+		</choice>
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="f7b2d621-9032-4d87-823c-f1a987af580b" >
+				<flow-ref doc:name="Flow Reference" doc:id="aa09b721-4e8d-4e3c-a530-a2813c182947" name="ErrorHandling_Flow"/>
+			</on-error-propagate>
+		</error-handler>
+	</flow>
+	<flow name="querySalesforceContacts" doc:id="df801eb6-ec94-40b0-bafc-7240ad9b9f2a" initialState="started" >
+		<salesforce:new-object-listener objectType="Contact" doc:name="Contact New OBject" doc:id="deb0e8de-f65b-4fc5-88c3-bed1ebbfb050" config-ref="Salesforce_Config" >
+			<scheduling-strategy >
+				<fixed-frequency />
+			</scheduling-strategy>
+		</salesforce:new-object-listener>
+		<ee:transform doc:name="Contact sftodb Transform Message" doc:id="70660243-7db7-43fc-be2d-e18dfbda39d3" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+[{
+	Type: "sales",
+	Description: payload.Description,
+	Email: payload.Email,
+	FirstName: payload.FirstName,
+	Phone: payload.Phone,
+	LastName: payload.LastName
+}]]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<db:bulk-insert doc:name="Contact Bulk insert" doc:id="1d7d830e-5a9f-43cf-b06e-18738f01604a" config-ref="Database_Config" >
+			<db:sql >INSERT INTO Contact (
+	FirstName,
+	Description,
+        LastName,
+        Email,
+	Type,
+        Phone,
+	LastModifiedDate
+	
+) VALUES (
+	:FirstName,
+	:Description,
+	:LastName,
+	:Email,
+        :Type,
+        :Phone,
+	CURRENT_TIMESTAMP()
+	)</db:sql>
+		</db:bulk-insert>
+		<logger level="INFO" doc:name="sftodb" doc:id="12ffc7b8-b477-4ad6-beb3-c04ebf01820f" message="salesforce" />
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="000dc961-d737-45b2-877d-b86f31d5e471" >
+				<flow-ref doc:name="Flow Reference" doc:id="87560b8f-8dca-4e4b-ae5a-2b38ed1ff131" name="ErrorHandling_Flow"/>
+			</on-error-propagate>
+		</error-handler>
+	</flow>
+	<flow name="queryDatabaseContacts" doc:id="f4edfdb8-438a-43d0-a0d4-6be90883d0df" initialState="stopped" >
+		<db:listener table="contact" doc:name="Contact On Table Row" doc:id="6bd8a6c6-7605-4f9d-bea2-732180fec838" config-ref="Database_Config" watermarkColumn="LastModifiedDate" idColumn="LastModifiedDate" >
+			<scheduling-strategy >
+				<fixed-frequency frequency="10" timeUnit="SECONDS" />
+			</scheduling-strategy>
+		</db:listener>
+		<ee:transform doc:name="Contact dbtoSf Transform" doc:id="790d8d71-c3c4-41b0-92bb-4f5371c72d61" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+[{
+	LastName: payload.LastName,
+	FirstName: payload.FirstName,
+	Phone: payload.Phone,
+	Email: payload.Email,
+	Description: payload.Description,
+}]]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<salesforce:create type="Contact" doc:name="Contact dbtosf Create" doc:id="f964307e-b0e3-4b37-9c11-37f3adf26153" config-ref="Salesforce_Config" />
+		<logger level="INFO" doc:name="dbtosf " doc:id="0819bb2b-cea3-4d8d-b193-ffe2abc31edd" message="database" />
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="fce9dfc0-e372-449c-a287-1e6d2a71f382" >
+				<flow-ref doc:name="Flow Reference" doc:id="65805553-98b2-48aa-a343-c28052b51b29" name="ErrorHandling_Flow"/>
+			</on-error-propagate>
+		</error-handler>
+	</flow>
+	<flow name="contact-getFlow" doc:id="47aae825-68bd-48b0-8a27-a3754a578f0b" >
+		<set-variable value="#[attributes.queryParams.source]" doc:name="Set Variable1" doc:id="e81295dc-d89e-4796-9f6b-a90cea0b4496" variableName="database" />
+		<choice doc:name="Choice1" doc:id="a548db29-dcf8-40ad-b747-21eaea9c36f0" >
+			<when expression='#[vars.database=="sfdc"]' >
+				<salesforce:query doc:name="CONTACT Query" doc:id="04391b06-716f-4ffb-9d79-ac5ce063d3e4" config-ref="Salesforce_Config" >
+					<salesforce:salesforce-query ><![CDATA[SELECT Id, Name, Email, Phone, Description, LastModifiedDate FROM Contact]]></salesforce:salesforce-query>
+				</salesforce:query>
+			</when>
+			<when expression='#[vars.database=="db"]' >
+				<db:select doc:name="CONTACT Select" doc:id="522f246b-245b-48c8-b77f-0cc21c65a93a" config-ref="Database_Config" >
+					<db:sql ><![CDATA[select * from contact]]></db:sql>
+				</db:select>
+				<logger level="INFO" doc:name="CONTACT Logger" doc:id="868526e9-4a07-4ecd-9b64-c5c42123e559" message="#[payload]" />
+			</when>
+			<otherwise >
+				<logger level="INFO" doc:name="CONTACTLogger" doc:id="9393e962-2971-4833-9121-70257131218d" message="Default" />
+			</otherwise>
+		</choice>
+		<ee:transform doc:name="CONTACT Transform Message" doc:id="cdab380a-22fb-4f34-82af-4b752996e339" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+
+		payload
+]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="81d9a8e3-d1d2-4426-9896-4577b86fe08e" >
+				<flow-ref doc:name="Copy_of_Flow Reference" doc:id="c09c2095-3379-43e8-9835-ba9b7c1c1fc1" name="ErrorHandling_Flow" />
+			</on-error-propagate>
+		</error-handler>
+	</flow>
+</mule>

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:munit="http://www.mulesoft.org/schema/mule/munit"
+	xmlns:munit-tools="http://www.mulesoft.org/schema/mule/munit-tools" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xsi:schemaLocation="
+		http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+		http://www.mulesoft.org/schema/mule/munit http://www.mulesoft.org/schema/mule/munit/current/mule-munit.xsd
+		http://www.mulesoft.org/schema/mule/munit-tools  http://www.mulesoft.org/schema/mule/munit-tools/current/mule-munit-tools.xsd
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd">
+	<munit:config name="accountImplementation-test-suite.xml" />
+	<munit:test name="accountImplementation-test-suite-casestudyFlowTest" doc:id="a1eb32ca-c43e-412e-87ad-98512531c628" description="Test">
+		<munit:behavior >
+			<set-variable value="sfdc" doc:name="Set Variable" doc:id="540479d2-3c85-4219-afee-edecbba4f095" variableName="db"/>
+			<choice doc:name="Choice" doc:id="67596263-cae0-4998-9e36-83e7ba8ada85" >
+				<when expression="#[vars.db=='sfdc']">
+					<salesforce:create type="Contact" doc:name="Create" doc:id="8a85d882-8b05-4018-abac-715300a0c0ea" config-ref="Salesforce_Config"/>
+				</when>
+			</choice>
+		</munit:behavior>
+		<munit:execution >
+			<flow-ref doc:name="Flow-ref to casestudyFlow" doc:id="5290253e-7580-48f2-99ad-70357b65ee33" name="casestudyFlow"/>
+		</munit:execution>
+		<munit:validation >
+			<munit-tools:assert-equals doc:name="Assert equals" doc:id="df2d48d7-e33d-4c61-be2b-708bd93dd0a4" actual="#[payload]" expected="checking"/>
+		</munit:validation>
+	</munit:test>
+
+
+</mule>

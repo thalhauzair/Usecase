@@ -1,0 +1,82 @@
+#%RAML 1.0
+baseUri: https://anypoint.mulesoft.com/mocking/api/v1/links/6e0a169e-3497-4ef4-be8c-87144abc4e2f/ # baseUri: https://anypoint.mulesoft.com/mocking/api/v1/links/be8fe1e3-fd3b-4f9b-9969-c6649e5b08a6/ # 
+title: Data Sync API
+
+types:
+  Account: !include accountsDatatype.raml
+  Contact: !include contactsDatatype.raml
+
+/accounts:
+  get:
+    queryParameters:
+      source:
+        required: true
+        enum:
+          - sfdc
+          - db
+    responses:
+      200:
+        body:
+          application/json:
+            type: Account[]
+            example: !include getAccounts.raml
+
+  post:
+    queryParameters:
+      source:
+        required: true
+        enum:
+          - sfdc
+          - db
+    body:
+      application/json:
+        type: Account[]
+        example: !include postAccounts.raml
+    responses:
+      200:
+        body:
+          application/json:
+            example:
+              message: Data added succesfully
+      400:
+        body:
+          application/json:
+            example:
+              message: There is error in syncing  the data
+          
+/contacts:
+  get:
+    queryParameters:
+      source:
+        required: true
+        enum:
+          - sfdc
+          - db
+    responses:
+      200:
+        body:
+          application/json:
+            type: Contact[]
+            example: !include getContacts.raml
+  post:
+    queryParameters:
+      source:
+        required: true
+        enum:
+          - sfdc
+          - db
+    body:
+      application/json:
+        type: Contact[]
+        example: !include postContacts.raml
+    responses:
+      200:
+        body:
+          application/json:
+            example:
+              message: Data added succesfully
+      400:
+        body:
+          application/json:
+            example:
+              message: There is error in syncing  the data 

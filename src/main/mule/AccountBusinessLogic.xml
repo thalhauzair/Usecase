@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:scripting="http://www.mulesoft.org/schema/mule/scripting" xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:os="http://www.mulesoft.org/schema/mule/os" xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
+http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/scripting http://www.mulesoft.org/schema/mule/scripting/current/mule-scripting.xsd">
+	
+	<flow name="casestudyFlow" doc:id="dbd68edc-1220-4d58-b3a0-ad1a1a2717ee" >
+		<set-variable value="#[attributes.queryParams.source]" doc:name="Set Variable" doc:id="2f564f87-9991-4ee2-b18b-0e3446a80a53" variableName="database"/>
+		<choice doc:name="Choice" doc:id="032bcb18-eaab-40a4-bb3e-f0844331ffa5" >
+			<when expression="#[vars.database =='sfdc']">
+				<salesforce:create doc:name="Create" doc:id="530b8828-a56b-4e1f-bbe6-e82ea18ad3db" config-ref="Salesforce_Config" type="Account">
+				</salesforce:create>
+				<scripting:execute engine="groovy" doc:name="Toggle flow" doc:id="00e84959-b3e8-4d89-9656-e4e29a7dcd63">
+    <scripting:code>
+      flow = registry.lookupByName(&quot;database&quot;).get();
+            flow1 = registry.lookupByName(&quot;salesforce&quot;).get();
+             if (flow1.isStopped())
+        flow1.start()
+      
+      if (flow.isStarted())
+        flow.stop()
+      
+    </scripting:code>
+</scripting:execute>
+				<logger level="INFO" doc:name="Logger" doc:id="fb7a7d29-9193-470a-aede-924c1b7fb110" message="added"/>
+			</when>
+			<when expression="#[vars.database=='db']">
+				<db:bulk-insert doc:name="Bulk insert" doc:id="9daf3d98-3ee2-4e95-a29e-3ad88c27752b" config-ref="Database_Config">
+					<db:sql >INSERT INTO Account (
+	AccountNumber,
+	Description,
+	Name,
+	NumberOfEmployees,
+	Type,
+	LastModifiedDate
+	
+) VALUES (
+	:AccountNumber,
+	:Description,
+	:Name,
+	:NumberOfEmployees,
+	:Type,
+	CURRENT_TIMESTAMP()
+	)</db:sql>
+				</db:bulk-insert>
+				<scripting:execute doc:name="Execute" doc:id="bab72cce-4f77-4e6f-a58b-ac185b994713" engine="groovy">
+					<scripting:code >
+      flow = registry.lookupByName(&quot;salesforce&quot;).get();
+        flow1 = registry.lookupByName(&quot;database&quot;).get();
+      
+      if (flow.isStarted())
+        flow.stop()
+       
+       if(flow1.isStopped())
+       flow1.start()
+      
+    </scripting:code>
+				</scripting:execute>
+				<logger level="INFO" doc:name="Logger" doc:id="2c66d95a-28d3-4a30-a268-cd6668d526ba" message="execute started"/>
+			</when>
+			<otherwise >
+				<logger level="INFO" doc:name="Logger" doc:id="8704b63d-3d48-4780-b0f2-aca7aecb621a" message="default"/>
+			</otherwise>
+		</choice>
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="29755f96-60ff-4e41-9db8-43a463578f40" >
+				<flow-ref doc:name="Flow Reference" doc:id="6bbfeb3c-a181-4ae0-a6ae-e15c64f4d7f5" name="ErrorHandling_Flow"/>
+			</on-error-propagate>
+		</error-handler>
+	</flow>
+	<flow name="salesforce" doc:id="54647d45-95fe-461f-acaf-ac03ce06ab29" initialState="started">
+		<salesforce:new-object-listener doc:name="On New Object" doc:id="9a3d159c-a0da-40ef-afb7-1ff71779481a" config-ref="Salesforce_Config" objectType="Account">
+			<scheduling-strategy >
+				<fixed-frequency />
+			</scheduling-strategy>
+		</salesforce:new-object-listener>
+		<ee:transform doc:name="Transform Message" doc:id="31630c91-a57b-4bce-9bd3-36312ad73d9c" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+[{
+	Type: payload.Type,
+	Description: payload.Description,
+	NumberOfEmployees: "300",
+	AccountNumber: payload.AccountNumber,
+	Name: payload.Name
+}]]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<db:bulk-insert doc:name="Bulk insert" doc:id="882c7523-0f1a-4d5f-ba59-d0c3f368f0b9" config-ref="Database_Config">
+			<db:sql >INSERT INTO Account (
+	AccountNumber,
+	Description,
+	Name,
+	NumberOfEmployees,
+	Type,
+	LastModifiedDate
+	
+) VALUES (
+	:AccountNumber,
+	:Description,
+	:Name,
+	:NumberOfEmployees,
+	:Type,
+	CURRENT_TIMESTAMP()
+)</db:sql>
+		</db:bulk-insert>
+		<logger level="INFO" doc:name="Logger" doc:id="51919fa9-96d8-4d49-b8cd-b115c7b42893" message="salesforce"/>
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="71c3ae87-f24b-43c3-8a78-6a3b25ff5cb7" >
+				<flow-ref doc:name="Flow Reference" doc:id="7606b423-01cb-47cf-a3a2-4b7a6590dc9e" name="ErrorHandling_Flow"/>
+			</on-error-propagate>
+		</error-handler>
+	</flow>
+	<flow name="database" doc:id="8dd3f867-d44b-4912-b7d0-582c4fb71abc" initialState="stopped">
+		<db:listener doc:name="On Table Row" doc:id="86330558-7fd5-4cab-a58e-7af3290b61e9" config-ref="Database_Config" table="account" watermarkColumn="LastModifiedDate" idColumn="LastModifiedDate">
+			<scheduling-strategy >
+				<fixed-frequency frequency="10" timeUnit="SECONDS"/>
+			</scheduling-strategy>
+		</db:listener>
+		<ee:transform doc:name="Transform Message" doc:id="c631a0a0-26f5-48f2-8a0c-5006f201354b" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+[{
+	Name: payload.Name,
+	Type: payload.Type,
+	AccountNumber: payload.AccountNumber,
+	Description: payload.Description,
+}]]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<salesforce:create type="Account" doc:name="Create" doc:id="3b198dcf-915b-4b9d-9ecf-85ab6efeffa4" config-ref="Salesforce_Config"/>
+		<logger level="INFO" doc:name="Logger" doc:id="02f0202d-e3f8-4234-b958-062ecb4abcda" message="database"/>
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="1738f71f-928e-4522-9f1c-86f536bb00cd" >
+				<flow-ref doc:name="Flow Reference" doc:id="fd13b824-7f0e-436a-a769-641426ccf24d" name="ErrorHandling_Flow"/>
+			</on-error-propagate>
+		</error-handler>
+	</flow>
+	<flow name="Accounts-GetFlow" doc:id="23bc9cb0-153a-40cc-b75f-8b510cbdce3e">
+		<set-variable value="#[attributes.queryParams.source]" doc:name="Set Variable" doc:id="80601f9a-34fd-4dd8-bf68-a744e711ea20" variableName="database" />
+		<choice doc:name="Choice" doc:id="6e12320b-0fa7-4264-b032-18fcd21d9ed4">
+			<when expression='#[vars.database=="sfdc"]'>
+				<salesforce:query doc:name="Query" doc:id="d9b9a794-d219-4a32-8355-cda916ed2941" config-ref="Salesforce_Config">
+			<salesforce:salesforce-query><![CDATA[SELECT Id, Name, AccountNumber, Type, Description, LastModifiedDate FROM Account]]></salesforce:salesforce-query>
+		</salesforce:query>
+			</when>
+			<when expression='#[vars.database=="db"]'>
+				<db:select doc:name="Select" doc:id="5921847a-a20c-4cc1-9420-db240f29aa44" config-ref="Database_Config">
+					<db:sql><![CDATA[select * from account]]></db:sql>
+				</db:select>
+				<logger level="INFO" doc:name="Logger" doc:id="1ed1aefe-dc3f-486b-b7bf-387ac3cd2543" message="#[payload]" />
+			</when>
+			<otherwise>
+				<logger level="INFO" doc:name="Logger" doc:id="e0353e39-9321-4cff-8e61-b28c5c7fcffd" message="Default" />
+			</otherwise>
+		</choice>
+		<ee:transform doc:name="Transform Message" doc:id="a1036b83-43d0-4619-befc-1e613cec11e7">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+
+		payload
+]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<error-handler>
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="8de9e0d7-d322-43e6-943c-5ec71add1cc1">
+				<flow-ref doc:name="Flow Reference" doc:id="983d50c3-ba21-46b2-851c-85c14b1cfb7d" name="ErrorHandling_Flow" />
+		</on-error-propagate>
+		</error-handler>
+	</flow>
+</mule>

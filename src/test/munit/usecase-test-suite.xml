@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:munit="http://www.mulesoft.org/schema/mule/munit" xmlns:munit-tools="http://www.mulesoft.org/schema/mule/munit-tools"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xsi:schemaLocation="
+		http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+		http://www.mulesoft.org/schema/mule/munit http://www.mulesoft.org/schema/mule/munit/current/mule-munit.xsd
+		http://www.mulesoft.org/schema/mule/munit-tools  http://www.mulesoft.org/schema/mule/munit-tools/current/mule-munit-tools.xsd">
+	<munit:config name="usecase-test-suite.xml" />
+	<munit:test name="usecase-test-suite-post:\accounts:application\json:usecase-configTest" doc:id="9bcda219-81dd-484b-ae57-a120adda6ff7" description="Test">
+		<munit:behavior >
+			<flow-ref doc:name="Flow Reference" doc:id="ab53b11c-2ee6-4770-9fdd-7a0cfe8c12a6" name="post:\accounts:application\json:usecase-config"/>
+		</munit:behavior>
+		<munit:execution >
+			<flow-ref doc:name="Flow-ref to post:\accounts:application\json:usecase-config" doc:id="ae7b380f-c6e0-4fc5-bb23-853b11dee49f" name="post:\accounts:application\json:usecase-config"/>
+		</munit:execution>
+		<munit:validation >
+			<munit-tools:assert-equals doc:name="Assert equals" doc:id="99289295-cecc-4205-9975-554eaf6c7c4e" actual="#[payload]" expected='#[message: "Data added succesfully"]'/>
+		</munit:validation>
+	</munit:test>
+	<munit:test name="usecase-test-suite-post:\contacts:application\json:usecase-configTest" doc:id="e5053222-8c79-40e0-9fd7-02ce94c3776e" description="Test">
+		<munit:behavior >
+			<flow-ref doc:name="Flow Reference" doc:id="b0e7636f-f3d7-4df6-b740-82fd2f20955e" name="post:\contacts:application\json:usecase-config"/>
+		</munit:behavior>
+		<munit:execution >
+			<flow-ref doc:name="Flow-ref to post:\contacts:application\json:usecase-config" doc:id="277e86c6-5301-43cb-ac57-516e64f0005c" name="post:\contacts:application\json:usecase-config"/>
+		</munit:execution>
+		<munit:validation >
+			<munit-tools:assert-equals doc:name="Assert equals" doc:id="fc33b32f-ad0d-4242-86e0-159169d2ce9d" actual="#[payload]" expected='#[message: "Data added succesfully"]'/>
+		</munit:validation>
+	</munit:test>
+	<munit:test name="usecase-test-suite-get:\contacts:usecase-configTest" doc:id="05620e23-b12c-497f-ada6-e2e1e6862bfc" description="Test">
+		<munit:behavior >
+			<set-payload value="aaa" doc:name="Set Payload" doc:id="b5d66dec-c956-4c2a-a28a-c2f26c657cca" />
+		</munit:behavior>
+		<munit:execution >
+			<flow-ref doc:name="Flow-ref to get:\contacts:usecase-config" doc:id="2cb7963e-9b7f-4113-80cc-eb17850dafc3" name="get:\contacts:usecase-config"/>
+		</munit:execution>
+		<munit:validation >
+			<munit-tools:assert-equals doc:name="Assert equals" doc:id="a5cd9165-b89b-4905-a038-64c96cec0e07" actual="#[payload]" expected="aaa"/>
+		</munit:validation>
+	</munit:test>
+
+
+</mule>
